@@ -70,19 +70,19 @@ class Llama_2(LanguageModel):
     self.config = config
     
   # Load Llama 2 config from YAML file
-  def load_config(file):
+  def load_config(self, file):
     with open(file, 'r') as f:
       config = yaml.safe_load(f)
     return config['llama-2']
   
-  def fine_tune(self, train_set, test_set, weights_out_path, statistics_out_path, prompt_pattern):
+  def fine_tune(self, train_set, weights_out_path, statistics_out_path, prompt_pattern):
     # Load config
     config = self.load_config(self.config)
     finetune_prompt, test_prompt = formatting_func_setup(prompt_pattern)
 
     # Select model
     model_name = f'meta-llama/{self.model.capitalize()}-hf'
-    output_dir = os.path.join('model', f'{self.model}-ocr')
+    output_dir = os.path.join('model_weights', weights_out_path)
 
     # Set up training data
     train = Dataset.from_pandas(train_set)
@@ -140,7 +140,7 @@ class Llama_2(LanguageModel):
     
   def test(self, test_set, weights_in_path, statistics_out_path, prompt_pattern):
     # model_dir = 'pykale/llama-2-13b-ocr' # their pretrained model
-    model_dir = weights_in_path
+    model_dir = os.path.join('model_weights', weights_in_path)
     finetune_prompt, test_prompt = formatting_func_setup(prompt_pattern)
     
     test = Dataset.from_pandas(test_set)
@@ -177,7 +177,7 @@ class Llama_2(LanguageModel):
         ipython.run_cell(cell)
 
     results = self.get_results(test, preds)
-    results.to_csv(f'results/{self.model}.csv', index=False)
+    results.to_csv(f'results/{statistics_out_path}', index=False)
     
     
 class BART(LanguageModel):
@@ -201,7 +201,7 @@ class BART(LanguageModel):
 
     # Select model
     model_name = f'facebook/{self.model}'
-    output_dir = os.path.join('model', f'{self.model}-ocr')
+    output_dir = os.path.join('model_weights', weights_out_path)
 
     # Set up training data
     train = train_set
@@ -233,7 +233,7 @@ class BART(LanguageModel):
     
   def test(self, test_set, weights_in_path, statistics_out_path, prompt_pattern):
       # model_dir = 'pykale/bart-large-ocr' # their pre-trained model
-      model_dir = weights_in_path
+      model_dir = os.path.join('model_weights', weights_in_path)
 
       test = test_set
       test = Dataset.from_pandas(test)
@@ -247,4 +247,4 @@ class BART(LanguageModel):
         preds.append(generator(sample['OCR Text'])[0]['generated_text'])
 
       results = self.get_results(test, preds)
-      results.to_csv(f'results/{self.model}.csv', index=False)
+      results.to_csv(f'results/{statistics_out_path}', index=False)

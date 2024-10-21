@@ -93,23 +93,24 @@ seq = pd.DataFrame({'Sample ID': sample_id, 'Date': date, 'Publication': publica
 seq['OCR Text'] = preprocess(seq['OCR Text'])
 seq['Ground Truth'] = preprocess(seq['Ground Truth'])
 seq['CER'] = seq.apply(lambda row: cer(row['OCR Text'], row['Ground Truth']), axis=1)
+seq.to_csv('datasets/bln600.csv', index=False)
 # seq.head(10)
 # seq['CER'].describe()
 
 
-# Split into train/test/val sets
-train_ids, test_ids = train_test_split(seq['Sample ID'].unique(), test_size=0.2, random_state=600)
-# train_ids, val_ids = train_test_split(train_ids, test_size=0.125, random_state=600)
+# # Split into train/test/val sets
+# train_ids, test_ids = train_test_split(seq['Sample ID'].unique(), test_size=0.2, random_state=600)
+# # train_ids, val_ids = train_test_split(train_ids, test_size=0.125, random_state=600)
 
-train = seq[seq['Sample ID'].isin(train_ids)]
-# val = seq[seq['Sample ID'].isin(val_ids)]
-test = seq[seq['Sample ID'].isin(test_ids)]
-train_ids, test_ids = train_test_split(seq['Sample ID'].unique(), test_size=0.2, random_state=600)
-# train_ids, val_ids = train_test_split(train_ids, test_size=0.125, random_state=600)
+# train = seq[seq['Sample ID'].isin(train_ids)]
+# # val = seq[seq['Sample ID'].isin(val_ids)]
+# test = seq[seq['Sample ID'].isin(test_ids)]
+# train_ids, test_ids = train_test_split(seq['Sample ID'].unique(), test_size=0.2, random_state=600)
+# # train_ids, val_ids = train_test_split(train_ids, test_size=0.125, random_state=600)
 
-train = seq[seq['Sample ID'].isin(train_ids)]
-# val = seq[seq['Sample ID'].isin(val_ids)]
-test = seq[seq['Sample ID'].isin(test_ids)]
+# train = seq[seq['Sample ID'].isin(train_ids)]
+# # val = seq[seq['Sample ID'].isin(val_ids)]
+# test = seq[seq['Sample ID'].isin(test_ids)]
 
-train.to_csv('data/train.csv', index=False)
-test.to_csv('data/test.csv', index=False)
+# train.to_csv('data/train.csv', index=False)
+# test.to_csv('data/test.csv', index=False)
