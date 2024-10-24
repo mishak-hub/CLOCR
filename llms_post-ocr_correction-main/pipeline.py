@@ -108,6 +108,10 @@ def split_dataset(seq: pd.DataFrame, name: str) -> Tuple[pd.DataFrame, pd.DataFr
   train = seq[seq['Sample ID'].isin(train_ids)]
   test = seq[seq['Sample ID'].isin(test_ids)]
   # val = seq[seq['Sample ID'].isin(val_ids)]
+  
+  train['CER'] = train.apply(lambda row: cer(row['OCR Text'], row['Ground Truth']), axis=1)
+  test['CER'] = test.apply(lambda row: cer(row['OCR Text'], row['Ground Truth']), axis=1)
+  
   train.to_csv(f'data/{name}_train.csv', index=False)
   test.to_csv(f'data/{name}_test.csv', index=False)
   # val.to_csv(f'data/{name}_val.csv', index=False)
@@ -146,8 +150,8 @@ def load_datasets(datasets: list[str]) -> Tuple[pd.DataFrame, pd.DataFrame]:
   train_set = pd.DataFrame(columns=['OCR Text','Ground Truth','Sample ID'])
   test_set = pd.DataFrame(columns=['OCR Text','Ground Truth','Sample ID'])
   for dataset in datasets:
-    train = pd.read_csv(f'data/{dataset}_train.csv', usecols=['OCR Text','Ground Truth','Sample ID'])
-    test = pd.read_csv(f'data/{dataset}_test.csv', usecols=['OCR Text','Ground Truth','Sample ID'])
+    train = pd.read_csv(f'data/{dataset}_train.csv', usecols=['CER','OCR Text','Ground Truth','Sample ID'])
+    test = pd.read_csv(f'data/{dataset}_test.csv', usecols=['CER','OCR Text','Ground Truth','Sample ID'])
     train['Sample ID'] = train['Sample ID'].astype(str)
     test['Sample ID'] = test['Sample ID'].astype(str)
     train_set = train_set._append(train, ignore_index=True)
@@ -224,24 +228,6 @@ def test(model_type: str, config_path: os.PathLike | str, model_version: str,
   # Test performance of LM
   language_model.test(test_set, weights_in_path, statistics_out_path, prompt_pattern)
 
-  
-  
-def observe_ocr_paper_correction_results():
-  """This function just shows the results for the four models trained and tested by the llms_post-ocr_correction project's team. Taken from their results.ipynb file.
-  """
-  results = {'bart-base': pd.read_csv('results/bart-base.csv'),
-            'bart-large': pd.read_csv('results/bart-large.csv'),
-            'llama-2-7b': pd.read_csv('results/llama-2-7b.csv'),
-            'llama-2-13b': pd.read_csv('results/llama-2-13b.csv')}
-
-  corrections = results['llama-2-13b']
-  corrections.head(10)
-  
-  for i in range(len(corrections)):
-    print(i+1)
-    print(f"OCR Text:\n{corrections['OCR Text'][i]}\n")
-    print(f"Ground Truth:\n{corrections['Ground Truth'][i]}\n")
-    print(f"Model Correction:\n{corrections['Model Correction'][i]}\n\n")
     
 if __name__ == '__main__':
   # Parse arguments for model/config/data

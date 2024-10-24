@@ -5,12 +5,14 @@
 #SBATCH --time=08:00:00          # Maximum runtime (e.g., 2 hours)
 #SBATCH --partition=normal       # Partition (queue) name
 #SBATCH --ntasks=1               # Number of tasks (1 for sequential execution)
-#SBATCH --cpus-per-task=8        # Number of CPU cores per task
-#SBATCH --mem=16G                # Memory per node
+#SBATCH --cpus-per-task=48        # Number of CPU cores per task
+#SBATCH --mem=32G                # Memory per node
 #SBATCH --gres=gpu:1             # Number of GPUs
 
 # Load required modules (if any)
 # module load python/3.9
+
+nvidia-smi
 
 # Activate your conda environment
 # source /path/to/your/conda/bin/activate your_environment_name

@@ -240,7 +240,7 @@ class BART(LanguageModel):
 
       model = AutoModelForSeq2SeqLM.from_pretrained(model_dir)
       tokenizer = AutoTokenizer.from_pretrained(model_dir)
-      generator = pipeline('text2text-generation', model=model.to('cuda'), tokenizer=tokenizer, device='cuda', max_length=1024)
+      generator = pipeline('text2text-generation', model=model.to('cuda'), tokenizer=tokenizer, device='cuda', max_length=1024, batch_size=8) # TODO This may be broken
 
       preds = []
       for sample in tqdm(test):

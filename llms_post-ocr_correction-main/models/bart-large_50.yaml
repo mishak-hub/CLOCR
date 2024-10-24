@@ -1,6 +1,6 @@
 # Model and Configuration Details
 model_type: "BART"               # Specify the model type, e.g., 'BART', 'Llama_2'
-config_path: "model_configs.yaml"  # Path to the model's configuration file, local to working dir
+config_path: "model_configs_50_epochs.yaml"  # Path to the model's configuration file, local to working dir
 
 # Model Version Details
 model_version: "bart-large" # Model version to load from HuggingFace
@@ -11,8 +11,8 @@ datasets:                         # List of datasets with their names
   - "bln600"
 
 # Output Paths
-weights_out_path: "bart-large-iam_tesseract"   # Goes into the `model_weights` folder
-statistics_out_path: "bart-large_iam_tesseract.csv" # Goes into the `results` folder
+weights_out_path: "bart-large_50"   # Goes into the `model_weights` folder
+statistics_out_path: "bart-large_50.csv" # Goes into the `results` folder
 
 # Prompt Pattern
 prompt_pattern: 1                # Integer representing the selected prompt pattern (see prompts.py)
