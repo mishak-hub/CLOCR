@@ -74,5 +74,33 @@ sbatch model_pipeline.slurm --config_file models/bart-large.yaml --fine_tune --p
 ```
 models/bart-base.yaml:
 ```yaml
-nope
+# Model and Configuration Details
+model_type: "BART"               # Specify the model type, e.g., 'BART', 'Llama_2'
+config_path: "model_configs.yaml"  # Path to the model's configuration file, local to working dir
+
+# Model Version Details
+model_version: "bart-base" # Model version to load from HuggingFace
+
+# Datasets
+datasets:                         # List of datasets with their names
+  # - "iam_tesseract"
+  - "bln600"
+
+# Output Paths
+weights_out_path: "bart-base"   # Goes into the `model_weights` folder
+statistics_out_path: "bart-base.csv" # Goes into the `results` folder
+
+# Prompt Pattern
+prompt_pattern: 1                # Integer representing the selected prompt pattern (see prompts.py)
 ```
+
+### Dataset preparation
+To make a (OCR output,ground truth) corpus goes in resources folder.
+each line is text in some corpuses, but for most it is not. Synthdog doesn't care -- it just grabs random sentences from the corpus to make samples from.
+
+`main_synthdog.slurm` generates synthdog files. You give it a config with corpus path yaml and an output path.
+`-c`: quantity of images to generate
+
+`main_tesseract.slurm`: give it folder name and a --lang, such as rus. 
+
+This generates an output file in treain, test, generation folders. separates after a space, maybe a ". " instead of just " "? 
