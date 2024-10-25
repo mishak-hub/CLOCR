@@ -1,0 +1,18 @@
+# Model and Configuration Details
+model_type: "Llama_2"               # Specify the model type, e.g., 'BART', 'Llama_2'
+config_path: "model_configs.yaml"  # Path to the model's configuration file, local to working dir
+
+# Model Version Details
+model_version: "llama-2-13b" # Model version to load from HuggingFace
+
+# Datasets
+datasets:                         # List of datasets with their names
+  - "iam_tesseract"
+  - "bln600"
+
+# Output Paths
+weights_out_path: "llama2_prompt_2"   # Goes into the `model_weights` folder
+statistics_out_path: "llama2_prompt_2.csv" # Goes into the `results` folder
+
+# Prompt Pattern
+prompt_pattern: 2                # Integer representing the selected prompt pattern (see prompts.py)

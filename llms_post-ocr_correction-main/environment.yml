@@ -1,0 +1,30 @@
+name: clocr-gpu
+channels:
+    - pytorch
+    - nvidia
+    - defaults
+dependencies:
+    - python>=3.10
+    - pip
+    - pytorch-gpu
+    - pip:
+        - kaggle
+        - pandas
+        - scikit-learn
+        - seaborn
+        - matplotlib
+        - opencv-python
+        - numpy
+        # - os
+        - argparse
+        # - tensorflow==2.1.0
+        - tqdm
+        - pyyaml
+        - levenshtein
+        - transformers==4.41.2
+        - datasets==2.20.0
+        - bitsandbytes==0.43.1
+        - peft==0.11.1
+        - trl==0.9.4
+        - IPython
+        - torch==2.3.1
