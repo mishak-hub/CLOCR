@@ -248,3 +248,134 @@ class BART(LanguageModel):
 
       results = self.get_results(test, preds)
       results.to_csv(f'results/{statistics_out_path}', index=False)
+      
+class Llama_3_1(LanguageModel):
+  def __init__(self, config, model=None):
+    # Check if the specified model is available; default to 'llama-3.1-405b-instruct'
+    if model in ['llama-3.1-7b', 'llama-3.1-13b', 'llama-3.1-70b', 'llama-3.1-405b-instruct']:
+      self.model = model
+    else:
+      print("Llama-3.1: defaulting to llama-3.1-405b-instruct")
+      self.model = 'llama-3.1-405b-instruct'
+    self.config = config
+  
+  # Load Llama 3.1 config from YAML file
+  def load_config(self, file):
+    with open(file, 'r') as f:
+      config = yaml.safe_load(f)
+    return config['llama-3.1']
+
+  def fine_tune(self, train_set, weights_out_path, statistics_out_path, prompt_pattern):
+    # Load config
+    config = self.load_config(self.config)
+    finetune_prompt, test_prompt = formatting_func_setup(prompt_pattern)
+
+    # Select model name for Hugging Face
+    model_name = f'meta-llama/{self.model.capitalize()}-hf'
+    output_dir = os.path.join('model_weights', weights_out_path)
+
+    # Set up training data
+    train = Dataset.from_pandas(train_set)
+
+    # Quantization config for large models
+    bnb_config = BitsAndBytesConfig(
+      load_in_4bit=True,
+      bnb_4bit_use_double_quant=True,
+      bnb_4bit_quant_type='nf4',
+      bnb_4bit_compute_dtype=torch.bfloat16,
+    )
+
+    # LoRA configuration
+    peft_config = LoraConfig(
+      lora_alpha=32,            # Increased alpha for larger model
+      lora_dropout=0.15,        # Higher dropout to avoid overfitting
+      r=128,                    # Higher r for larger layer adjustments
+      bias='none',
+      task_type='CAUSAL_LM',
+    )
+
+    # Initialize Llama 3.1
+    model = AutoModelForCausalLM.from_pretrained(
+      model_name,
+      quantization_config=bnb_config,
+      use_cache=False,
+      device_map='auto',
+    )
+    model.config.pretraining_tp = 1
+    model = prepare_model_for_kbit_training(model)
+    model = get_peft_model(model, peft_config)
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = 'right'
+
+    # Instruction-tune Llama 3.1
+    config['learning_rate'] = float(config['learning_rate'])
+    train_args = SFTConfig(
+      output_dir=output_dir,
+      **config,
+    )
+    trainer = SFTTrainer(
+      model=model,
+      args=train_args,
+      train_dataset=train,
+      peft_config=peft_config,
+      max_seq_length=1024,
+      tokenizer=tokenizer,
+      packing=True,
+      formatting_func=finetune_prompt,
+    )
+    trainer.train()
+    trainer.save_model(output_dir)
+
+  def test(self, test_set, weights_in_path, statistics_out_path, prompt_pattern):
+    # Model and paths setup
+    model_dir = os.path.join('model_weights', weights_in_path)
+    finetune_prompt, test_prompt = formatting_func_setup(prompt_pattern)
+    
+    # Load test dataset
+    test = Dataset.from_pandas(test_set)
+
+    # Quantization config
+    bnb_config = BitsAndBytesConfig(
+      load_in_4bit=True,
+      bnb_4bit_use_double_quant=True,
+      bnb_4bit_quant_type='nf4',
+      bnb_4bit_compute_dtype=torch.bfloat16,
+    )
+
+    # Load fine-tuned model
+    model = AutoPeftModelForCausalLM.from_pretrained(
+      model_dir,
+      quantization_config=bnb_config,
+      low_cpu_mem_usage=True,
+      device_map='auto',
+      torch_dtype=torch.bfloat16,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = 'right'
+
+    # Collect predictions
+    preds = []
+    for i in tqdm(range(len(test))):
+      input_text = test_prompt(test[i])  # Format input for the current test instance
+      input_ids = tokenizer(input_text, max_length=1024, return_tensors='pt', truncation=True).input_ids.cuda()
+
+      # Generate predictions
+      with torch.inference_mode():
+        outputs = model.generate(
+          input_ids=input_ids,
+          max_new_tokens=1024,
+          do_sample=True,
+          temperature=0.7,
+          top_p=0.1,
+          top_k=40
+        )
+      # Decode prediction
+      pred = tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0][len(input_text):].strip()
+      preds.append(pred)
+
+    # Evaluate results
+    results = self.get_results(test, preds)
+    results.to_csv(f'results/{statistics_out_path}', index=False)
