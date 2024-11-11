@@ -3,6 +3,8 @@
 ## Prerequisites
 * Anaconda: [WSL Installation Guide](https://medium.com/hydroinformatics/software-development-in-linux-install-miniconda-in-wsl-27e809a0c064)
 
+The below sections of installing miniconda are not needed if you just specify a python version! See below section about using `conda env create python=3.10 -f environment.yml `. 
+
 It is quite intimidating to install Anaconda on Newton. I recommend doing the following:
 ```bash
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -30,7 +32,7 @@ skill <id_of_job_to_kill>
 ## To set up llms_post-ocr_correction-main Folder
 This folder hosts the training suite. `ls` into that folder, and run:
 ```bash
-conda env create -f environment.yml
+conda env create python=3.10 -f environment.yml 
 conda activate clocr
 ```
 Newton may give you issues creating the environment. I was able to get it running on my Newton, but I have to check if there were any tweaks I made before running `conda env create`. 
@@ -104,3 +106,13 @@ each line is text in some corpuses, but for most it is not. Synthdog doesn't car
 `main_tesseract.slurm`: give it folder name and a --lang, such as rus. 
 
 This generates an output file in treain, test, generation folders. separates after a space, maybe a ". " instead of just " "? 
+
+
+
+
+
+
+```bash
+conda env create python=3.10 -f phi3-environment.yml 
+sbatch phi3_model_pipeline.slurm --config_file models/phi3_4k_p1.yaml --fine_tune --prepare_dataset --test
+```

@@ -29,6 +29,17 @@ import Levenshtein
 # import pandas as pd
 # import torch
 
+
+# phi-3 imports
+from transformers import TrainingArguments # AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from huggingface_hub import ModelCard, ModelCardData, HfApi
+from datasets import load_dataset
+from jinja2 import Template
+# from trl import SFTTrainer
+# import yaml
+from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
+
+
 class LanguageModel(ABC):
 
   # @abstractmethod
@@ -43,7 +54,7 @@ class LanguageModel(ABC):
   # @abstractmethod
   # def validate(self, val_set, weights_in_path, statistics_out_path, prompt_pattern):
   #     pass
-    
+
   # Compute character error rate (CER)
   def cer(self, prediction, target):
     distance = Levenshtein.distance(prediction, target)
@@ -60,6 +71,150 @@ class LanguageModel(ABC):
 
 # TODO: args.model -> self.model may conflict with test function's use of local model variable
 
+class Phi_3(LanguageModel):
+  def __init__(self, config, model=None):
+    if model in ['phi-3-mini-4k', 'phi-3-mini-128k']:
+      self.model = model
+    else:
+      print("Phi-3: defaulting to phi-3-mini-4k")
+      self.model = 'phi-3-mini-4k'
+    self.config = config
+
+  # Load Phi-3 config from YAML file
+  def load_config(self, file):
+    with open(file, 'r') as f:
+      config = yaml.safe_load(f)
+    return config['phi-3']
+
+  def fine_tune(self, train_set, weights_out_path, statistics_out_path, prompt_pattern):
+    # Load config
+    config = self.load_config(self.config)
+    finetune_prompt, test_prompt = formatting_func_setup(prompt_pattern)
+
+    # Select model
+    model_name = f'microsoft/{self.model.capitalize()}-instruct'
+    output_dir = os.path.join('model_weights', weights_out_path)
+
+    if torch.cuda.is_bf16_supported():
+      compute_dtype = torch.bfloat16
+    else:
+      compute_dtype = torch.float16
+
+    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    dataset = Dataset.from_pandas(train_set)
+
+    # This stuff was from the datacamp guide
+    """
+    dataset = load_dataset(DATASET_NAME, split="train")
+    EOS_TOKEN=tokenizer.eos_token_id
+    def formatting_prompts_func(examples):
+        convos = examples["conversations"]
+        texts = []
+        mapper = {"system": "system\n", "human": "\nuser\n", "gpt": "\nassistant\n"}
+        end_mapper = {"system": "", "human": "", "gpt": ""}
+        for convo in convos:
+            text = "".join(f"{mapper[(turn := x['from'])]} {x['value']}\n{end_mapper[turn]}" for x in convo)
+            texts.append(f"{text}{EOS_TOKEN}")
+        return {"text": texts}
+    dataset = dataset.map(formatting_prompts_func, batched=True)
+    print(dataset['text'][8])
+    """
+
+    # TODO add bnb and peft+ lora stuff
+
+    config['learning_rate'] = float(config['learning_rate'])
+    train_args = TrainingArguments(
+      fp16 = not torch.cuda.is_bf16_supported(),
+      bf16 = torch.cuda.is_bf16_supported(),
+      output_dir=output_dir,
+      **config,
+    )
+
+    trainer = SFTTrainer(
+      model=model,
+      args=train_args,
+      train_dataset=dataset,
+      dataset_text_field="text",
+      max_seq_length=128,
+      formatting_func=finetune_prompt
+    )
+    trainer = SFTTrainer(
+      model=model,
+      args=train_args,
+      train_dataset=train,
+      peft_config=peft_config,
+      max_seq_length=1024,
+      tokenizer=tokenizer,
+      packing=True,
+      formatting_func=finetune_prompt,
+    )
+
+    trainer.train()
+    trainer.save_model(output_dir)
+
+  def test(self, test_set, weights_in_path, statistics_out_path, prompt_pattern):
+    model_dir = os.path.join('model_weights', weights_in_path)
+    finetune_prompt, test_prompt = formatting_func_setup(prompt_pattern)
+
+    test = Dataset.from_pandas(test_set)
+
+    bnb_config = BitsAndBytesConfig(
+      load_in_4bit=True,
+      bnb_4bit_use_double_quant=True,
+      bnb_4bit_quant_type='nf4',
+      bnb_4bit_compute_dtype=torch.bfloat16,
+    )
+
+    model = AutoPeftModelForCausalLM.from_pretrained(
+      model_dir,
+      quantization_config=bnb_config,
+      low_cpu_mem_usage=True,
+      torch_dtype="auto",
+      device_map="cuda"
+    )
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+
+    # i = 0
+    # preds = []
+    #
+    # cell = '''
+    # input_ids = tokenizer(test_prompt(test[i]), max_length=1024, return_tensors='pt', truncation=True).input_ids.cuda()
+    # with torch.inference_mode():
+    #   outputs = model.generate(input_ids=input_ids, max_new_tokens=1024, do_sample=True, temperature=0.7, top_p=0.1, top_k=40)
+    # pred = tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0][len(prompt):].strip()
+    # preds.append(pred)
+    # i += 1
+    # '''
+    #
+    # ipython = get_ipython()
+    # for _ in tqdm(range(len(test))):
+    #     ipython.run_cell(cell)
+
+    preds = []
+    for i in range(len(test)):
+        # Prepare input IDs for the model
+        prompt = test_prompt(test[i])
+        input_ids = tokenizer(prompt, max_length=1024, return_tensors='pt', truncation=True).input_ids.cuda()
+        # Run inference
+        with torch.inference_mode():
+            outputs = model.generate(
+                input_ids=input_ids,
+                max_new_tokens=1024,
+                do_sample=True,
+                temperature=0.7,
+                top_p=0.1,
+                top_k=40
+            )
+
+        # Decode output and store the result
+        pred = tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0][len(prompt):].strip()
+        preds.append(pred)
+
+    results = self.get_results(test, preds)
+    results.to_csv(f'results/{statistics_out_path}', index=False)
+
+
 class Llama_2(LanguageModel):
   def __init__(self, config, model=None):
     if model in ['llama-2-7b', 'llama-2-13b', 'llama-2-70b']:
@@ -68,13 +223,13 @@ class Llama_2(LanguageModel):
       print("Llama-2: defaulting to llama-2-7b")
       self.model = 'llama-2-7b'
     self.config = config
-    
+
   # Load Llama 2 config from YAML file
   def load_config(self, file):
     with open(file, 'r') as f:
       config = yaml.safe_load(f)
     return config['llama-2']
-  
+
   def fine_tune(self, train_set, weights_out_path, statistics_out_path, prompt_pattern):
     # Load config
     config = self.load_config(self.config)
@@ -137,12 +292,12 @@ class Llama_2(LanguageModel):
     )
     trainer.train()
     trainer.save_model(output_dir)
-    
+
   def test(self, test_set, weights_in_path, statistics_out_path, prompt_pattern):
     # model_dir = 'pykale/llama-2-13b-ocr' # their pretrained model
     model_dir = os.path.join('model_weights', weights_in_path)
     finetune_prompt, test_prompt = formatting_func_setup(prompt_pattern)
-    
+
     test = Dataset.from_pandas(test_set)
 
     bnb_config = BitsAndBytesConfig(
@@ -160,26 +315,47 @@ class Llama_2(LanguageModel):
     )
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
 
-    i = 0
+    # i = 0
+    # preds = []
+
+    # cell = '''
+    # input_ids = tokenizer(test_prompt(test[i]), max_length=1024, return_tensors='pt', truncation=True).input_ids.cuda()
+    # with torch.inference_mode():
+    #   outputs = model.generate(input_ids=input_ids, max_new_tokens=1024, do_sample=True, temperature=0.7, top_p=0.1, top_k=40)
+    # pred = tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0][len(prompt):].strip()
+    # preds.append(pred)
+    # i += 1
+    # '''
+
+    # ipython = get_ipython()
+    # for _ in tqdm(range(len(test))):
+    #     ipython.run_cell(cell)
+    
     preds = []
+    for i in range(len(test)):
+        # Prepare input IDs for the model
+        prompt = test_prompt(test[i])
+        input_ids = tokenizer(prompt, max_length=1024, return_tensors='pt', truncation=True).input_ids.cuda()
+        # Run inference
+        with torch.inference_mode():
+            outputs = model.generate(
+                input_ids=input_ids,
+                max_new_tokens=1024,
+                do_sample=True,
+                temperature=0.7,
+                top_p=0.1,
+                top_k=40
+            )
 
-    cell = '''
-    input_ids = tokenizer(test_prompt(test[i]), max_length=1024, return_tensors='pt', truncation=True).input_ids.cuda()
-    with torch.inference_mode():
-      outputs = model.generate(input_ids=input_ids, max_new_tokens=1024, do_sample=True, temperature=0.7, top_p=0.1, top_k=40)
-    pred = tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0][len(prompt):].strip()
-    preds.append(pred)
-    i += 1
-    '''
+        # Decode output and store the result
+        pred = tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0][len(prompt):].strip()
+        preds.append(pred)
 
-    ipython = get_ipython()
-    for _ in tqdm(range(len(test))):
-        ipython.run_cell(cell)
 
     results = self.get_results(test, preds)
     results.to_csv(f'results/{statistics_out_path}', index=False)
-    
-    
+
+
 class BART(LanguageModel):
   def __init__(self, config, model=None):
     if model in ['bart-base', 'bart-large']:
@@ -188,13 +364,13 @@ class BART(LanguageModel):
       print("BART: defaulting to bart-base")
       self.model = 'bart-base'
     self.config = config
-  
+
   # Load BART config from YAML file
   def load_config(self, file):
     with open(file, 'r') as f:
       config = yaml.safe_load(f)
     return config['bart']
-    
+
   def fine_tune(self, train_set, weights_out_path, statistics_out_path, prompt_pattern):
     # Load config
     config = self.load_config(self.config)
@@ -230,7 +406,7 @@ class BART(LanguageModel):
     )
     trainer.train()
     trainer.save_model(output_dir)
-    
+
   def test(self, test_set, weights_in_path, statistics_out_path, prompt_pattern):
       # model_dir = 'pykale/bart-large-ocr' # their pre-trained model
       model_dir = os.path.join('model_weights', weights_in_path)
@@ -248,7 +424,7 @@ class BART(LanguageModel):
 
       results = self.get_results(test, preds)
       results.to_csv(f'results/{statistics_out_path}', index=False)
-      
+
 class Llama_3_1(LanguageModel):
   def __init__(self, config, model=None):
     # Check if the specified model is available; default to 'llama-3.1-405b-instruct'
@@ -258,7 +434,7 @@ class Llama_3_1(LanguageModel):
       print("Llama-3.1: defaulting to llama-3.1-405b-instruct")
       self.model = 'llama-3.1-405b-instruct'
     self.config = config
-  
+
   # Load Llama 3.1 config from YAML file
   def load_config(self, file):
     with open(file, 'r') as f:
@@ -332,7 +508,7 @@ class Llama_3_1(LanguageModel):
     # Model and paths setup
     model_dir = os.path.join('model_weights', weights_in_path)
     finetune_prompt, test_prompt = formatting_func_setup(prompt_pattern)
-    
+
     # Load test dataset
     test = Dataset.from_pandas(test_set)
 

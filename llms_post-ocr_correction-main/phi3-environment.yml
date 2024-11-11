@@ -1,4 +1,4 @@
-name: clocr-gpu
+name: phi3-clocr
 channels:
     - pytorch
     - nvidia
