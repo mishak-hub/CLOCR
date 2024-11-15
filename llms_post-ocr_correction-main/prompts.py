@@ -3,7 +3,7 @@ import pandas as pd
 # Formats samples into prompt template using patterns.
 # 2D list, with each first-level entry being the fine-tuning prompt followed by the test prompt.
 prompts = [
-  # Prompt provided by llms_post-ocr_correction GitHub project
+  # Prompt 1 provided by llms_post-ocr_correction GitHub project
   [ """### Instruction:
 Fix the OCR errors in the provided text.
 
@@ -19,10 +19,10 @@ Fix the OCR errors in the provided text.
 {}
 
 ### Response:
-"""], 
-  # Prompt created by Diego, with modifications by Dr. Bedi
+"""],
+  # Prompt 2 created by Diego, with modifications by Dr. Bedi
   [ """### Instruction:
-The following sentence has grammatical errors, strange words, and spelling mistakes. Please rewrite it correctly and clearly, without adding new or extraneous tokens.
+The following sentence has grammatical errors, strange words, and spelling mistakes introduced by OCR scanning. Please rewrite it correctly and clearly, without adding new or extraneous tokens.
 
 ### Input:
 {}
@@ -30,7 +30,92 @@ The following sentence has grammatical errors, strange words, and spelling mista
 ### Response:
 {}
 """, """### Instruction:
-The following sentence has grammatical errors, strange words, and spelling mistakes. Please rewrite it correctly and clearly, without adding new or extraneous tokens.
+The following sentence has grammatical errors, strange words, and spelling mistakes introduced by OCR scanning. Please rewrite it correctly and clearly, without adding new or extraneous tokens.
+
+### Input:
+{}
+
+### Response:
+"""],
+  # Prompt 3 by Michael Miller
+  [ """### Instruction:
+The provided text contains mistakes due to OCR processing. Please correct it for readability and accuracy by fixing any errors introduced by OCR, ensuring the result is grammatically correct and clear. Keep the original meaning intact.
+
+### Input:
+{}
+
+### Response:
+{}
+""", """### Instruction:
+The provided text contains mistakes due to OCR processing. Please correct it for readability and accuracy by fixing any errors introduced by OCR, ensuring the result is grammatically correct and clear. Keep the original meaning intact.
+
+### Input:
+{}
+
+### Response:
+"""],
+  # Prompt 4 by Michael Miller
+  [ """### Instruction:
+Edit the following sentence to correct OCR mistakes without altering the total number of characters in the original scanned document. This number is unknown to you, but can be assumed to be the number of characters if everything is spelled correctly and extraneous symbols or corrupted text had its noise rectified.
+
+### Input:
+{}
+
+### Response:
+{}
+""", """### Instruction:
+Edit the following sentence to correct OCR mistakes without altering the total number of characters in the original scanned document. This number is unknown to you, but can be assumed to be the number of characters if everything is spelled correctly and extraneous symbols or corrupted text had its noise rectified.
+
+### Input:
+{}
+
+### Response:
+"""],
+  # Prompt 5 by Michael Miller
+  [ """### Instruction:
+The following input contains mistakes introduced solely by OCR. Please fix any spelling, grammar, or formatting issues in the provided text without adding or removing characters from the original document scanned by OCR.
+
+### Input:
+{}
+
+### Response:
+{}
+""", """### Instruction:
+The following input contains mistakes introduced solely by OCR. Please fix any spelling, grammar, or formatting issues in the provided text without adding or removing characters from the original document scanned by OCR.
+
+### Input:
+{}
+
+### Response:
+"""],
+  # Prompt 6 by Michael Miller
+  [ """### Instruction:
+Revise the following text to correct OCR errors, but maintain the exact character count and avoid introducing any new characters.
+
+### Input:
+{}
+
+### Response:
+{}
+""", """### Instruction:
+Revise the following text to correct OCR errors, but maintain the exact character count and avoid introducing any new characters.
+
+### Input:
+{}
+
+### Response:
+"""],
+  # Prompt 7 by Michael Miller
+  ["""### Instruction:
+Correct only the errors in the provided text. Avoid adding or removing any characters, and keep the character count consistent with what the original document would look like without error noise.
+
+### Input:
+{}
+
+### Response:
+{}
+""", """### Instruction:
+Correct only the errors in the provided text. Avoid adding or removing any characters, and keep the character count consistent with what the original document would look like without error noise.
 
 ### Input:
 {}
@@ -49,7 +134,7 @@ def test_prompt(prompt: int, test_sample: pd.DataFrame):
 
 # This function is for generating the above functions with only one variable
 # per finetune_prompt call. For use in things like SFTTrainer, which doesn't
-# allow args to be used. 
+# allow args to be used.
 # usage: finetune_prompt, test_prompt = formatting_func_setup(prompt);
 #        formatting_func=finetune_prompt; # in SFTTrainer
 def formatting_func_setup(prompt: int):
@@ -57,5 +142,5 @@ def formatting_func_setup(prompt: int):
     return prompts[prompt][0].format(example['OCR Text'], example['Ground Truth'])
   def t_prompt(test_sample: pd.DataFrame):
     return prompts[prompt][1].format(test_sample['OCR Text'])
-  
+
   return ft_prompt, t_prompt
