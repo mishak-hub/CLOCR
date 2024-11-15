@@ -67,7 +67,7 @@ import yaml
 from typing import Tuple
 
 from prompts import finetune_prompt, test_prompt
-from models import LanguageModel, Llama_2, BART
+from models import LanguageModel, Llama_2, BART, Llama_3
 
 def load_config(config_path: os.PathLike):
     with open(config_path, "r") as f:
@@ -184,10 +184,12 @@ def load_model(model_type: str, config_path: os.PathLike | str,
   """
   if (model_type == "Llama_2"):
     language_model = Llama_2(config_path, model_version)
+  elif (model_type == "Llama_3"):
+    language_model = Llama_3(config_path, model_version)
   elif (model_type == "BART"):
     language_model = BART(config_path, model_version)
   else:
-    raise ValueError("Only 'Llama_2' and 'BART' models supported currently!")  
+      raise ValueError("Only 'Llama_2', 'Llama_3' and 'BART' models supported currently!")  
   
   return language_model
   
