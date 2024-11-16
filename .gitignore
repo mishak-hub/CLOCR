@@ -1,3 +1,12 @@
 
 /llms_post-ocr_correction-main/data/BLN600
 /llms_post-ocr_correction-main/data
+/llms_post-ocr_correction-main/final_models/*.yaml
+llms_post-ocr_correction-main/final_models/*.yaml
+llms_post-ocr_correction-main/final_models/bart-base_base_prompt_1.yaml
+llms_post-ocr_correction-main/final_models/bart-base_english_prompt_1.yaml
+llms_post-ocr_correction-main/final_models/bart-base_expanded-10k_prompt_1.yaml
+llms_post-ocr_correction-main/final_models/bart-base_expanded_prompt_1.yaml
+llms_post-ocr_correction-main/final_models/bart-large_base_prompt_1.yaml
+llms_post-ocr_correction-main/final_models/bart-large_english_prompt_1.yaml
+llms_post-ocr_correction-main/final_models/bart-large_expanded-10k_prompt_1.yaml
