@@ -1,8 +1,8 @@
-def format_patterns(model_type, config_path, model_versions, prompt_patterns, datasets_groups):
+def format_patterns(model_type, config_path, model_versions, prompt_patterns, datasets_groups, keys_to_print, prompts_to_print):
   for model_version in model_versions:
     for prompt_pattern in prompt_patterns:
-      for i, datasets in enumerate(datasets_groups):
-        weights_out_path = f"{model_version}_datagroup_{i}_prompt_{prompt_pattern}"
+      for datagroup in datasets_groups:
+        weights_out_path = f"{model_version}_{datagroup}_prompt_{prompt_pattern}"
         statistics_out_path = f"{weights_out_path}.csv"
         filename = f"final_models/{weights_out_path}.yaml"
         with open(filename, 'w') as file:
@@ -15,7 +15,7 @@ model_version: "{model_version}" # Model version to load from HuggingFace
 
 # Datasets
 datasets:                         # List of datasets with their names
-{''.join(f'  - "{dataset}"{chr(10)}' for dataset in datasets)}
+{''.join(f'  - "{dataset}"{chr(10)}' for dataset in datasets_groups[datagroup])}
 
 # Output Paths
 weights_out_path: "{weights_out_path}"   # Goes into the `model_weights` folder
@@ -27,30 +27,37 @@ prompt_pattern: {prompt_pattern}                # Integer representing the selec
         #             model_version=model_version, datasets=datasets,
         #             weights_out_path=weights_out_path, statistics_out_path=statistics_out_path,
         #             prompt_pattern=prompt_pattern))
-        print(f"sbatch phi3_model_pipeline.slurm --config_file final_models/{filename} --fine_tune --test") # don't prepare dataset each time!
+        if datagroup in keys_to_print and prompt_pattern in prompts_to_print:
+          print(f"sbatch phi3_model_pipeline.slurm --config_file final_models/{filename} --fine_tune --test") # don't prepare dataset each time!
         # print("\n\n\n\n---------------------------------\n\n\n")
-
-datasets_groups = [['iam_tesseract', 'bln600'],
-  ['europarl_10k', 'plainwiki_10k', 'plusone_10k', 'iam_tesseract', 'bln600'],
-  ['europarl', 'plainwiki', 'plusone', 'iam_tesseract', 'bln600']]
+        
+datasets_groups = {"base": ['bln600'], # base dataset style
+  "expanded-10k": ['europarl_10k', 'plainwiki_10k', 'plusone_10k', 'iam_tesseract', 'bln600'], # expanded context with large datas
+  "expanded": ['europarl', 'plainwiki', 'plusone', 'iam_tesseract', 'bln600'], # expanded context but not as large datas
+  "english": ['plainwiki', 'bln600', 'iam_tesseract']
+}
+keys_to_print = ['expanded-10k'] # this file will make all yaml files, but only print the keys you ask for.
 config_path = "model_configs.yaml"
-prompt_patterns = range(1, 4)
-for i in range(len(datasets_groups)):
-    print(f"sbatch phi3_model_pipeline.slurm --config_file models/bart-base_datagroup_{i}_prompt_1 --prepare_dataset") # prepare dataset once
+prompt_patterns = range(1, 8)
+prompts_to_print = [1, 2] # just like keys_to_print
+for key in datasets_groups:
+    print(f"sbatch phi3_model_pipeline.slurm --config_file models/bart-base_{key}_prompt_1 --prepare_dataset") # prepare dataset once
 
 
 model_type = "Phi_3"
 model_versions = ['phi-3-mini-4k', 'phi-3-mini-128k']
-format_patterns(model_type, config_path, model_versions, prompt_patterns, datasets_groups)
+format_patterns(model_type, config_path, model_versions, prompt_patterns, datasets_groups, keys_to_print, prompts_to_print)
 
 model_type = "Llama_2"
-model_versions = ['llama-2-7b', 'llama-2-13b', 'llama-2-70b']
-format_patterns(model_type, config_path, model_versions, prompt_patterns, datasets_groups)
+# model_versions = ['llama-2-7b', 'llama-2-13b', 'llama-2-70b']
+model_versions = ['llama-2-7b', 'llama-2-13b']
+format_patterns(model_type, config_path, model_versions, prompt_patterns, datasets_groups, keys_to_print, prompts_to_print)
 
 model_type = "BART"
 model_versions = ['bart-base', 'bart-large']
-format_patterns(model_type, config_path, model_versions, prompt_patterns, datasets_groups)
+format_patterns(model_type, config_path, model_versions, [1], datasets_groups, keys_to_print, prompts_to_print)
 
 model_type = "Llama_3_1"
-model_versions = ['llama-3.1-7b', 'llama-3.1-13b', 'llama-3.1-70b', 'llama-3.1-405b-instruct']
-format_patterns(model_type, config_path, model_versions, prompt_patterns, datasets_groups)
+# model_versions = ['llama-3.1-7b', 'llama-3.1-13b', 'llama-3.1-70b', 'llama-3.1-405b-instruct']
+model_versions = ['llama-3.1-7b', 'llama-3.1-13b']
+format_patterns(model_type, config_path, model_versions, prompt_patterns, datasets_groups, keys_to_print, prompts_to_print)
