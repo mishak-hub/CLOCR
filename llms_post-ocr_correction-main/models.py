@@ -494,6 +494,7 @@ class Llama_3(LanguageModel):
         # Decode output and store the result
         pred = tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0][len(prompt):].strip()
         preds.append(pred)
+        
 
     results = self.get_results(test, preds)
     results.to_csv(f'results/{statistics_out_path}', index=False)
@@ -568,6 +569,7 @@ class BART(LanguageModel):
       results = self.get_results(test, preds)
       results.to_csv(f'results/{statistics_out_path}', index=False)
 
+# MM; this class is unused. Replaced with Aleenah's Llama_3 class. 
 class Llama_3_1(LanguageModel):
   def __init__(self, config, model=None):
     # Check if the specified model is available; default to 'llama-3.1-405b-instruct'
