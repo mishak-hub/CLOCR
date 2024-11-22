@@ -116,3 +116,14 @@ This generates an output file in treain, test, generation folders. separates aft
 conda env create python=3.10 -f phi3-environment.yml 
 sbatch phi3_model_pipeline.slurm --config_file models/phi3_4k_p1.yaml --fine_tune --prepare_dataset --test
 ```
+
+## Analyzing Results
+Results can be analyzed through the results_analysis.py file, which takes in a list of sheets to be analyzed. For instance, if you have the following files in the `llms_post-ocr_correction-main/results` directory:
+* `bart-base.csv`
+* `bart-large_50.csv`
+* etc.
+You would run the following: 
+```bash
+python results_analysis.py --sheet_names bart-base, bart-large_50
+```
+NOTE: Only supply the filenames without preceding folder and extension! This is because the code runs `pd.read_csv(f'results/{sheet}.csv')` for each sheet specified in your `sheet_names` list from bash. 
