@@ -125,16 +125,16 @@ We can use the LLaMA2 tests to affirm that our dataset group is better than the 
 ```
 | Dataset Group | Model Version | Prompt |
 |---------------|---------------|--------|
-| expanded_10k  | llama-3.1-13b | 2      |
+| expanded-10k  | llama-3.1-13b | 2      |
 ```
 
 ### Phi-3
-For the same reason we only used `expanded_10k` on prompt 2 for `llama-3.1-13b`, we will do the same for both `phi-3-mini-4k` and `phi-3-mini-128k`. These models are very small, so running multiple tests is less resource-intensive combined than even one LLaMA 2 training. 
+For the same reason we only used `expanded-10k` on prompt 2 for `llama-3.1-13b`, we will do the same for both `phi-3-mini-4k` and `phi-3-mini-128k`. These models are very small, so running multiple tests is less resource-intensive combined than even one LLaMA 2 training. 
 ```
 | Dataset Group | Model Version   | Prompt |
 |---------------|-----------------|--------|
-| expanded_10k  | phi-3-mini-4k   | 2      |
-| expanded_10k  | phi-3-mini-128k | 2      |
+| expanded-10k  | phi-3-mini-4k   | 2      |
+| expanded-10k  | phi-3-mini-128k | 2      |
 ```
 These results will be compared to the LLaMA 2 and 3.1 results. 
 
