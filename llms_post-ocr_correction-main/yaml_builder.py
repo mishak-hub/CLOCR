@@ -32,9 +32,11 @@ prompt_pattern: {prompt_pattern}                # Integer representing the selec
         # print("\n\n\n\n---------------------------------\n\n\n")
         
 datasets_groups = {"base": ['bln600'], # base dataset style
-  "expanded-10k": ['europarl_10k', 'plainwiki_10k', 'plusone_10k', 'iam_tesseract', 'bln600'], # expanded context with large datas
-  "expanded": ['europarl', 'plainwiki', 'plusone', 'iam_tesseract', 'bln600'], # expanded context but not as large datas
-  "english": ['plainwiki', 'bln600', 'iam_tesseract']
+  "expanded": ['europarl', 'plainwiki', 'plusone', 'iam_tesseract', 'bln600'], # expanded context with 80k-100k entries
+  "expanded-10k": ['europarl_10k', 'plainwiki_10k', 'plusone_10k', 'iam_tesseract', 'bln600'], # expanded context but larger datasets reduced by 1/10th size
+  "english": ['plainwiki', 'bln600', 'iam_tesseract'],
+  "bart-compromise": ['plainwiki_10k', 'bln600'],
+  "llama2-compromise": ['europarl_10k', 'plainwiki_10k', 'plusone_10k', 'bln600']
 }
 keys_to_print = ['expanded-10k'] # this file will make all yaml files, but only print the keys you ask for.
 config_path = "model_configs.yaml"
@@ -60,4 +62,6 @@ format_patterns(model_type, config_path, model_versions, [1], datasets_groups, k
 model_type = "Llama_3_1"
 # model_versions = ['llama-3.1-7b', 'llama-3.1-13b', 'llama-3.1-70b', 'llama-3.1-405b-instruct']
 model_versions = ['llama-3.1-7b', 'llama-3.1-13b']
+prompts_to_print = [1]
 format_patterns(model_type, config_path, model_versions, prompt_patterns, datasets_groups, keys_to_print, prompts_to_print)
+
