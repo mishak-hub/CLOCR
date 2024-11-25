@@ -4,7 +4,7 @@ channels:
     - nvidia
     - defaults
 dependencies:
-    - python>=3.10
+    - python=3.10
     - pip
     - pytorch-gpu
     - pip:
@@ -33,5 +33,5 @@ dependencies:
         - bitsandbytes==0.43.1
         - peft==0.11.1
         - trl==0.9.4
-        - IPython
+        # - IPython
         - torch==2.3.1

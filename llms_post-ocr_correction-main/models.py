@@ -21,7 +21,7 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, DataCollatorForSe
 
 # results notebook imports
 # from datasets import Dataset
-from IPython.core.getipython import get_ipython
+# from IPython.core.getipython import get_ipython
 from peft import AutoPeftModelForCausalLM
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig, pipeline

@@ -121,6 +121,34 @@ Correct only the errors in the provided text. Avoid adding or removing any chara
 {}
 
 ### Response:
+"""],
+  # Prompt 8 takes Prompts 1-7 and runs them through a prompt optimization
+  # GPT-4o task, and applies BPO to ensure the prompt is well-engineered
+  # from a research-backed perspective. 
+  ["""### Instruction:
+The following text contains errors introduced by OCR scanning, such as misspellings, grammatical mistakes, and formatting issues. Your task is to correct the text to ensure it is grammatically accurate, readable, and true to its original intended meaning.
+
+**Constraints:**
+1. Maintain the exact character count of the corrected text to match what the original, error-free document would contain.
+2. Do not introduce any new characters, words, or symbols that were not part of the original input.
+3. Correct only the OCR errors without altering the structure or content unnecessarily.
+
+### Input:
+{}
+
+### Response:
+{}""", """### Instruction:
+The following text contains errors introduced by OCR scanning, such as misspellings, grammatical mistakes, and formatting issues. Your task is to correct the text to ensure it is grammatically accurate, readable, and true to its original intended meaning.
+
+**Constraints:**
+1. Maintain the exact character count of the corrected text to match what the original, error-free document would contain.
+2. Do not introduce any new characters, words, or symbols that were not part of the original input.
+3. Correct only the OCR errors without altering the structure or content unnecessarily.
+
+### Input:
+{}
+
+### Response:
 """]
 ]
 
