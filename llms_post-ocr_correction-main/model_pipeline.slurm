@@ -1,11 +1,12 @@
 #!/bin/bash
+#SBATCH --constraint=h100
 #SBATCH --job-name=LM_OCR        # Job name
 #SBATCH --output=LM_OCR.%j.out   # Output file for the job
 #SBATCH --error=LM_OCR.%j.err    # Error file for the job
-#SBATCH --time=08:00:00          # Maximum runtime (e.g., 2 hours)
+#SBATCH --time=10:00:00          # Maximum runtime (e.g., 2 hours)
 #SBATCH --partition=normal       # Partition (queue) name
 #SBATCH --ntasks=1               # Number of tasks (1 for sequential execution)
-#SBATCH --cpus-per-task=48        # Number of CPU cores per task
+#SBATCH --cpus-per-task=20        # Number of CPU cores per task
 #SBATCH --mem=32G                # Memory per node
 #SBATCH --gres=gpu:1             # Number of GPUs
 
@@ -15,11 +16,21 @@
 nvidia-smi
 
 # Activate your conda environment
+module purge
+module load cuda/cuda-11.3
+
+module load anaconda
+# conda env create -f phi3-environment.yml
+conda activate phi3-clocr
+huggingface-cli login --token #add token here 
+
+module list
+
 # source /path/to/your/conda/bin/activate your_environment_name
 # source /home/cap6614.student2/miniconda3/activate base
-source activate base
-conda init
-conda activate clocr-gpu
+# source activate base
+# conda init
+# conda activate clocr-gpu
 
 # Parse command line arguments
 FINETUNE=false
