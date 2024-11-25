@@ -28,7 +28,7 @@ prompt_pattern: {prompt_pattern}                # Integer representing the selec
         #             weights_out_path=weights_out_path, statistics_out_path=statistics_out_path,
         #             prompt_pattern=prompt_pattern))
         if datagroup in keys_to_print and prompt_pattern in prompts_to_print:
-          print(f"sbatch phi3_model_pipeline.slurm --config_file {filename} --fine_tune --test") # don't prepare dataset each time!
+          print(f"sbatch phi3_model_pipeline.slurm --config_file {filename} --fine_tune --test --prepare_dataset") 
         # print("\n\n\n\n---------------------------------\n\n\n")
         
 datasets_groups = {"base": ['bln600'], # base dataset style
@@ -42,8 +42,8 @@ config_path = "model_configs.yaml"
 prompt_patterns = [1, 8]
 keys_to_print = ['expanded-10k'] # this script will make all yaml files, but only print the keys you ask for.
 prompts_to_print = [1, 8] # just like keys_to_print
-for key in datasets_groups:
-    print(f"sbatch phi3_model_pipeline.slurm --config_file models/bart-base_{key}_prompt_1 --prepare_dataset") # prepare dataset once
+# for key in datasets_groups:
+#     print(f"sbatch phi3_model_pipeline.slurm --config_file models/bart-base_{key}_prompt_1 --prepare_dataset") # prepare dataset once
 
 
 model_type = "Phi_3"
