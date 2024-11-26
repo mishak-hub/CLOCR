@@ -139,16 +139,16 @@ class Phi_3(LanguageModel):
       max_seq_length=128,
       formatting_func=finetune_prompt
     )
-    trainer = SFTTrainer(
-      model=model,
-      args=train_args,
-      train_dataset=train,
-      peft_config=peft_config,
-      max_seq_length=1024,
-      tokenizer=tokenizer,
-      packing=True,
-      formatting_func=finetune_prompt,
-    )
+    # trainer = SFTTrainer(
+    #   model=model,
+    #   args=train_args,
+    #   train_dataset=train,
+    #   peft_config=peft_config,
+    #   max_seq_length=1024,
+    #   tokenizer=tokenizer,
+    #   packing=True,
+    #   formatting_func=finetune_prompt,
+    # )
 
     trainer.train()
     trainer.save_model(output_dir)
@@ -265,6 +265,7 @@ class Llama_2(LanguageModel):
       quantization_config=bnb_config,
       use_cache=False,
       device_map='auto',
+      force_download=True
     )
     model.config.pretraining_tp = 1
     model = prepare_model_for_kbit_training(model)
@@ -560,11 +561,11 @@ class BART(LanguageModel):
 
       model = AutoModelForSeq2SeqLM.from_pretrained(model_dir)
       tokenizer = AutoTokenizer.from_pretrained(model_dir)
-      generator = pipeline('text2text-generation', model=model.to('cuda'), tokenizer=tokenizer, device='cuda', max_length=1024, batch_size=8) # TODO This may be broken
+      generator = pipeline('text2text-generation', model=model.to('cuda'), tokenizer=tokenizer, device='cuda', max_length=1024, batch_size=32) # TODO This may be broken
 
       preds = []
       for sample in tqdm(test):
-        preds.append(generator(sample['OCR Text'])[0]['generated_text'])
+        preds.append(generator(sample['OCR Text'], batch_size=32)[0]['generated_text'])
 
       results = self.get_results(test, preds)
       results.to_csv(f'results/{statistics_out_path}', index=False)

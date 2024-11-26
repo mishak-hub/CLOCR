@@ -1,43 +1,27 @@
 # CLOCR
 
 ## Prerequisites
-* Anaconda: [WSL Installation Guide](https://medium.com/hydroinformatics/software-development-in-linux-install-miniconda-in-wsl-27e809a0c064)
+* Anaconda: [WSL Installation Guide](https://medium.com/hydroinformatics/software-development-in-linux-install-miniconda-in-wsl-27e809a0c064). Newton already has Anaconda installed. 
+* Rust/Cargo: Just run the following bash command: `curl https://sh.rustup.rs -sSf | sh` ([source](https://doc.rust-lang.org/cargo/getting-started/installation.html))
 
-The below sections of installing miniconda are not needed if you just specify a python version! See below section about using `conda env create python=3.10 -f environment.yml `. 
-
-It is quite intimidating to install Anaconda on Newton. I recommend doing the following:
-```bash
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-chmod +x Miniconda3-latest-Linux-x86_64.sh
-./Miniconda3-latest-Linux-x86_64.sh
-```
-Now, you should `tmux` into your newton shell to keep whatever you're doing alive:
-```bash
-tmux new -s jupyter
-```
-You can use ctrl-b and then press `[` to be able to scroll with pgUP/pgDown. You can also press ctrl-b and type `:set -g mouse on` if you need to scroll with your mouse. You need to hold down Shift to select text copyable with ctrl+shift+c. 
-
-For some reason, Newton doesn't like Conda installing things with multiple threads without being in a slurm job. So, do this:
+## To set up llms_post-ocr_correction-main Folder
+This folder hosts the training suite. `ls` into that folder, and create the conda environemnt. Newton doesn't like Conda installing things with multiple threads without being in a slurm job. So, do this:
 ```bash
 srun -p main --time=02:00:00 --ntasks-per-node 2 --gres gpu:1 --pty bash
 ```
 Then, continue through the sections below. If you mess something up and need to restart, and kill the old slurm `bash`, just do this:
 ```bash
-squeue -u cap6614.student2
+squeue --me
 skill <id_of_job_to_kill>
 ```
 
-* Rust/Cargo: Just run the following bash command: `curl https://sh.rustup.rs -sSf | sh` ([source](https://doc.rust-lang.org/cargo/getting-started/installation.html))
-
-## To set up llms_post-ocr_correction-main Folder
-This folder hosts the training suite. `ls` into that folder, and run:
 ```bash
-conda env create python=3.10 -f environment.yml 
-conda activate clocr
+module load anaconda
+module load cuda/cuda-11.3
+conda env create -f environment.yml 
+conda activate clocr-gpu
 ```
-Newton may give you issues creating the environment. I was able to get it running on my Newton, but I have to check if there were any tweaks I made before running `conda env create`. 
-
-As of now, the code is not finished in implementation, so don't go trying out `pipeline.py` yet!
+Newton defaultly requires module `anaconda` be loaded, hence its inclusion here. This means we do not have to install Miniconda, as a previous version of this repository required.
 
 ## Running the Pipeline
 ### SLURM script
@@ -62,7 +46,22 @@ sbatch model_pipeline.slurm --config_file path/to/test.yaml --prepare_dataset --
 ```
 
 ### YAML File
+The pipeline uses yaml files to establish model training etc. The `yaml_builder.py` file automagically fills the `models` directory with yaml files and prints to console what `sbatch` commands to run to run the set of 11 tests we have devised for the purposes of our paper. This script could be modified to run tests of your own as well. A simple `python yaml_builder.py` will do the trick in any stock python3 environment. 
 
+Here are the 11 tests we ran:
+```bash
+sbatch model_pipeline.slurm --config_file models/phi-3-mini-4k_expanded-10k_prompt_8.yaml --fine_tune --test --prepare_dataset
+sbatch model_pipeline.slurm --config_file models/phi-3-mini-128k_expanded-10k_prompt_8.yaml --fine_tune --test --prepare_dataset
+sbatch model_pipeline.slurm --config_file models/llama-2-7b_llama2-compromise_prompt_1.yaml --fine_tune --test --prepare_dataset
+sbatch model_pipeline.slurm --config_file models/llama-2-7b_llama2-compromise_prompt_8.yaml --fine_tune --test --prepare_dataset
+sbatch model_pipeline.slurm --config_file models/llama-2-13b_llama2-compromise_prompt_1.yaml --fine_tune --test --prepare_dataset
+sbatch model_pipeline.slurm --config_file models/llama-2-13b_llama2-compromise_prompt_8.yaml --fine_tune --test --prepare_dataset
+sbatch model_pipeline.slurm --config_file models/bart-base_bart-compromise_prompt_1.yaml --fine_tune --test --prepare_dataset
+sbatch model_pipeline.slurm --config_file models/bart-large_bart-compromise_prompt_1.yaml --fine_tune --test --prepare_dataset
+sbatch model_pipeline.slurm --config_file models/llama-3.1-7b_base_prompt_1.yaml --fine_tune --test --prepare_dataset
+sbatch model_pipeline.slurm --config_file models/llama-3.1-13b_base_prompt_1.yaml --fine_tune --test --prepare_dataset
+sbatch model_pipeline.slurm --config_file models/llama-3.1-13b_expanded-10k_prompt_8.yaml --fine_tune --test --prepare_dataset
+```
 
 ## Datasets
 
@@ -127,3 +126,11 @@ You would run the following:
 python results_analysis.py --sheet_names bart-base, bart-large_50
 ```
 NOTE: Only supply the filenames without preceding folder and extension! This is because the code runs `pd.read_csv(f'results/{sheet}.csv')` for each sheet specified in your `sheet_names` list from bash. 
+
+
+## Other Newton Tips
+You can `tmux` into your Newton shell to keep whatever you're doing alive, even across sessions of logging in and out of SSH:
+```bash
+tmux new -s clocr
+```
+You can use ctrl-b and then press `[` to be able to scroll with pgUP/pgDown. You can also press ctrl-b and type `:set -g mouse on` if you need to scroll with your mouse. You need to hold down Shift to select text copyable with ctrl+shift+c. ctrl-b+[d] will detach the client  but keep it alive on server. You can come back to it later thorugh `tmux attach clocr`. 

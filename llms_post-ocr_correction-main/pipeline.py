@@ -186,12 +186,12 @@ def load_model(model_type: str, config_path: os.PathLike | str,
     language_model = Llama_2(config_path, model_version)
   elif (model_type == "Phi_3"):
     language_model = Phi_3(config_path, model_version)
-  elif (model_type == "Llama_3"):
+  elif (model_type == "Llama_3_1"):
     language_model = Llama_3(config_path, model_version)
   elif (model_type == "BART"):
     language_model = BART(config_path, model_version)
   else:
-      raise ValueError("Only 'Phi_3', 'Llama_2', 'Llama_3' and 'BART' models supported currently!")  
+      raise ValueError("Only 'Phi_3', 'Llama_2', 'Llama_3_1' and 'BART' models supported currently!")  
   
   return language_model
   
