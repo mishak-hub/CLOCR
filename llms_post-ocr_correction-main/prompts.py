@@ -3,6 +3,23 @@ import pandas as pd
 # Formats samples into prompt template using patterns.
 # 2D list, with each first-level entry being the fine-tuning prompt followed by the test prompt.
 prompts = [
+  # Prompt 0 is a fall-back to what's provided by llms_post-ocr_correction GitHub project
+  [ """### Instruction:
+Fix the OCR errors in the provided text.
+
+### Input:
+{}
+
+### Response:
+{}
+""", """### Instruction:
+Fix the OCR errors in the provided text.
+
+### Input:
+{}
+
+### Response:
+"""],
   # Prompt 1 provided by llms_post-ocr_correction GitHub project
   [ """### Instruction:
 Fix the OCR errors in the provided text.
@@ -167,8 +184,26 @@ def test_prompt(prompt: int, test_sample: pd.DataFrame):
 #        formatting_func=finetune_prompt; # in SFTTrainer
 def formatting_func_setup(prompt: int):
   def ft_prompt(example: pd.DataFrame):
-    return prompts[prompt][0].format(example['OCR Text'], example['Ground Truth'])
+    if isinstance(example['OCR Text'], str):  # Single example
+      return prompts[prompt][0].format(example['OCR Text'], example['Ground Truth'])
+    elif isinstance(example['OCR Text'], list):  # Batch processing
+      output_texts = []
+      for i in range(len(example['OCR Text'])):
+          text = prompts[prompt][0].format(example['OCR Text'][i], example['Ground Truth'][i])
+          output_texts.append(text)
+      return output_texts
+    else:
+      raise ValueError(f"Unexpected input format for ft_prompt: {type(example)}")
   def t_prompt(test_sample: pd.DataFrame):
-    return prompts[prompt][1].format(test_sample['OCR Text'])
+    if isinstance(test_sample['OCR Text'], str):  # Single example
+      return prompts[prompt][1].format(test_sample['OCR Text'])
+    elif isinstance(test_sample['OCR Text'], list):  # Batch processing
+      output_texts = []
+      for i in range(len(test_sample['OCR Text'])):
+          text = prompts[prompt][1].format(test_sample['OCR Text'][i])
+          output_texts.append(text)
+      return output_texts
+    else:
+      raise ValueError(f"Unexpected input format for t_prompt: {type(test_sample)}")
 
   return ft_prompt, t_prompt

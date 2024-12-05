@@ -100,9 +100,14 @@ class Phi_3(LanguageModel):
     else:
       compute_dtype = torch.float16
 
-    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True, force_download=True)
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     dataset = Dataset.from_pandas(train_set)
+    print("dataset.info: ", dataset.info)
+    print("dataset.features: ", dataset.features)
+    print("dataset.column_names: ", dataset.column_names)
+    print(f"Number of rows: {len(dataset)}")
+    print(f"Number of columns: {len(dataset.column_names)}")
 
     # This stuff was from the datacamp guide
     """
@@ -130,12 +135,38 @@ class Phi_3(LanguageModel):
       output_dir=output_dir,
       **config,
     )
+    split = dataset.train_test_split(test_size=0.2, seed=42)
+    print("split: ", split)
+    ds_train = split["train"]
+    ds_valid = split["test"]
+    print(f"type(dataset): {type(dataset)}\ntype(ds_train): {type(ds_train)}\ntype(ds_valid): {type(ds_valid)}")
+    print("ds_train: ", ds_train)
+    try:  
+      print("ds_train.column_names: ", ds_train.column_names)
+      print(f"ds_train Number of rows: {len(ds_train)}")
+      print(f"ds_train Number of columns: {len(ds_train.column_names)}")
+      print("\n\n")
+      print("ds_valid.column_names: ", ds_valid.column_names)
+      print(f"ds_valid Number of rows: {len(ds_valid)}")
+      print(f"ds_valid Number of columns: {len(ds_valid.column_names)}")
+    except AttributeError:
+      print("Attribute error for printing information on ds_train, ds_valid")
+    try:
+      sample = ds_train[0]
+      print(f"SAMPLE: {type(sample)}")
+      print(sample)
+      print("\n\nSAMPLE FINETUNE PROMPT:")
+      print(finetune_prompt(sample))
+    except:
+      print("Couldn't print out a sample for you. Moving on...")
+
 
     trainer = SFTTrainer(
       model=model,
       args=train_args,
-      train_dataset=dataset,
-      dataset_text_field="text",
+      train_dataset=ds_train,
+      eval_dataset=ds_valid,
+      # dataset_text_field="text", # not needed since there's a formatting func taking multiple fields!
       max_seq_length=128,
       formatting_func=finetune_prompt
     )
@@ -171,7 +202,8 @@ class Phi_3(LanguageModel):
       quantization_config=bnb_config,
       low_cpu_mem_usage=True,
       torch_dtype="auto",
-      device_map="cuda"
+      device_map="cuda",
+      force_download=True
     )
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
 
@@ -189,18 +221,18 @@ class Phi_3(LanguageModel):
     #
     # ipython = get_ipython()
     # for _ in tqdm(range(len(test))):
-    #     ipython.run_cell(cell)
+    #     ipython.run_celtl(cell)
 
     preds = []
     for i in range(len(test)):
         # Prepare input IDs for the model
         prompt = test_prompt(test[i])
-        input_ids = tokenizer(prompt, max_length=1024, return_tensors='pt', truncation=True).input_ids.cuda()
+        input_ids = tokenizer(prompt, max_length=128, return_tensors='pt', truncation=True).input_ids.cuda()
         # Run inference
         with torch.inference_mode():
-            outputs = model.generate(
+            outputs = model.generae(
                 input_ids=input_ids,
-                max_new_tokens=1024,
+                max_new_tokens=128,
                 do_sample=True,
                 temperature=0.7,
                 top_p=0.1,
@@ -241,6 +273,11 @@ class Llama_2(LanguageModel):
 
     # Set up training data
     train = Dataset.from_pandas(train_set)
+    print("train.info: ", train.info)
+    print("train.features: ", train.features)
+    print("train.column_names: ", train.column_names)
+    print(f"Number of rows: {len(train)}")
+    print(f"Number of columns: {len(train.column_names)}")
 
     # Quantization config
     bnb_config = BitsAndBytesConfig(
@@ -274,6 +311,17 @@ class Llama_2(LanguageModel):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = 'right'
+    # added at chatgpt's recommendation:
+    max_seq_length = 512
+    tokenizer.model_max_length = max_seq_length
+    tokenizer.truncation = False
+
+    sample = train[0]
+    print(f"SAMPLE: {type(sample)}")
+    print(sample)
+    print("SAMPLE FINETUNE PROMPT:")
+    print(finetune_prompt(sample))
+
 
     # Instruction-tune Llama 2
     config['learning_rate'] = float(config['learning_rate'])
@@ -286,7 +334,7 @@ class Llama_2(LanguageModel):
       args=train_args,
       train_dataset=train,
       peft_config=peft_config,
-      max_seq_length=1024,
+      max_seq_length=max_seq_length,
       tokenizer=tokenizer,
       packing=True,
       formatting_func=finetune_prompt,
@@ -410,6 +458,7 @@ class Llama_3(LanguageModel):
       quantization_config=bnb_config,
       use_cache=False,
       device_map='auto',
+      force_download=True
     )
     model.config.pretraining_tp = 1
     model = prepare_model_for_kbit_training(model)
@@ -457,6 +506,7 @@ class Llama_3(LanguageModel):
       quantization_config=bnb_config,
       low_cpu_mem_usage=True,
       torch_dtype=torch.float16,
+      force_download=True
     )
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
 
@@ -622,6 +672,7 @@ class Llama_3_1(LanguageModel):
       quantization_config=bnb_config,
       use_cache=False,
       device_map='auto',
+      force_download=True
     )
     model.config.pretraining_tp = 1
     model = prepare_model_for_kbit_training(model)
@@ -673,6 +724,7 @@ class Llama_3_1(LanguageModel):
       low_cpu_mem_usage=True,
       device_map='auto',
       torch_dtype=torch.bfloat16,
+      force_download=True
     )
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     tokenizer.pad_token = tokenizer.eos_token
